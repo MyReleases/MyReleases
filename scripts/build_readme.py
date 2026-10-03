@@ -43,7 +43,7 @@ LINES = [
     ("and plans into shipped products.", X, YS[5], BODY, 400, SOFT, .03, .3, False),
     ("Concept, scope, roadmap, release.", X, YS[6], BODY, 400, SOFT, .03, .3, False),
     ("Games people finish, apps people keep.", X, YS[7], BODY, 400, SOFT, .03, .5, False),
-    ("— ヴィゾリー", None if SIGN_RIGHT else X, YS[8], BODY, 700, INK, .09, .6, False),  # x=None: flush right
+    ("ー ヴィゾリー", None if SIGN_RIGHT else X, YS[8], BODY, 700, INK, .09, .6, False),  # x=None: flush right
     (EMAIL, X, 704, LINK, 700, INK, .04, .25, True),
     ("@VisoryDaily on X", X, 738, LINK, 700, INK, .04, 0, True),
 ]
