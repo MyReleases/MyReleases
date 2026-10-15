@@ -169,9 +169,8 @@ def readme_html(src):
     for _, _, cells in ROWS:
         for name, left, right, link, alt in cells:
             tag = f'<img src="{src(name)}" width="{pct(right - left)}" align="top" alt="{about if alt is None else alt}" />'
-            # GitHub turns a bare image into a link to its own file. An anchor with a name and no href
-            # stops that without making it clickable (<picture> also stops it, but breaks the layout).
-            out.append(f'<a href="{link}">{tag}</a>' if link else f'<a name="card-{name}">{tag}</a>')
+            # GitHub turns a bare image into a link to its own file; inside <picture> it leaves it alone
+            out.append(f'<a href="{link}">{tag}</a>' if link else f'<picture>{tag}</picture>')
     # no whitespace between the tags: any gap would show up as a seam in the card
     return "<p>" + "".join(out) + "</p>"
 
