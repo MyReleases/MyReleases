@@ -4,9 +4,8 @@
     python scripts/build_readme.py --inset   # smaller drawing with margins around it
 
 The card is one picture cut into slices so that the e-mail and the X handle can be real
-links (a link inside a single image would not be clickable on GitHub). The card is split into a
-left column (text, then the two links) and a right column (the drawing in one piece, so it animates
-as a whole); each slice becomes assets/readme-<name>.svg.
+links (a link inside a single image would not be clickable on GitHub). ROWS lists the
+slices row by row; each becomes assets/readme-<name>.svg.
 
 README.md is rewritten to stitch the slices back together. assets/readme.svg is the whole
 card in one file, for previews. The drawing comes from assets/dots-source.txt (braille dot
@@ -24,7 +23,7 @@ BLEED = "--inset" not in sys.argv  # drawing enlarged to the full height of the 
 X, TITLE, ROLE, BODY, LINK = 72, 76, 28, 21, 21   # left edge of the text, then font sizes
 YS = [190, 270, 326, 408, 442, 476, 510, 544, 584]  # baselines, top to bottom
 RULE_Y = 346
-ART = (612, 0, 8.24, 3.1) if BLEED else (620, 112, 6, 2.3)  # x, y, dot spacing, dot radius
+ART = (600, 0, 8.24, 3.1) if BLEED else (620, 112, 6, 2.3)  # x, y, dot spacing, dot radius
 ART_ROWS, ROW_TIME = 100, 0.025  # the inset drawing prints row by row, top to bottom
 RISE_TIME = 1.3                  # the full-height drawing floats up into place
 ART_START = 0.4
@@ -51,17 +50,16 @@ LINES = [
 RULE_AFTER = 2  # index of the line the short rule appears under
 
 # The card row by row: (top, bottom, [(name, left, right, link, alt), ...])
-SPLIT_X = 600  # the drawing starts right of this line, the text ends left of it (keep it 600, see readme_html)
-# (name, (x, y, width, height), link, alt); alt None = the card's full text
-SLICES_LIST = [
-    ("art", (SPLIT_X, 0, W - SPLIT_X, H), None, ""),
-    ("text", (0, 0, SPLIT_X, 600), None, None),
-    ("mail", (0, 600, SPLIT_X, 112), f"mailto:{EMAIL}", EMAIL),
-    ("x", (0, 712, SPLIT_X, H - 712), X_URL, "@VisoryDaily on X"),
+LINK_W = 352
+ROWS = [
+    (0, 600, [("top", 0, W, None, None)]),
+    (600, 712, [("mail", 0, LINK_W, f"mailto:{EMAIL}", EMAIL), ("mail-rest", LINK_W, W, None, "")]),
+    (712, H, [("x", 0, LINK_W, X_URL, "@VisoryDaily on X"), ("x-rest", LINK_W, W, None, "")]),
 ]
-# Every left slice must stay taller than one line of README text (24px) even on a phone,
+# Every row must stay taller than one line of README text (24px) even on a phone,
 # or the browser pads the row and a dark seam shows: 112 of 1280 units is 24px at 274px wide.
-SLICES = {name: box for name, box, _, _ in SLICES_LIST}
+SLICES = {name: (left, top, right - left, bottom - top)
+          for top, bottom, cells in ROWS for name, left, right, _, _ in cells}
 
 # braille bit -> (column, row) inside one 2x4 cell
 BITS = {0x01: (0, 0), 0x02: (0, 1), 0x04: (0, 2), 0x40: (0, 3), 0x08: (1, 0), 0x10: (1, 1), 0x20: (1, 2), 0x80: (1, 3)}
@@ -165,20 +163,14 @@ def pct(width):
 
 
 def readme_html(src):
-    """The stitched card. `src(name)` gives the image address for a slice.
-
-    The drawing floats right at full height; the left slices stack next to it, one per line."""
+    """The stitched card. `src(name)` gives the image address for a slice."""
     about = " ".join(line[0] for line in LINES if not line[8])
     out = []
-    for name, (x, y, w, h), link, alt in SLICES_LIST:
-        side = name == "art"
-        # SPLIT_X = 600 makes both shares exact binary fractions (15/32 and 17/32), so the two
-        # columns add up to the full width with no rounding: no gap, and nothing wraps under the float
-        width = pct(w)
-        tag = f'<img src="{src(name)}" width="{width}" align="{'right' if side else 'top'}" alt="{about if alt is None else alt}" />'
-        # GitHub turns a bare image into a link to its own file; an anchor with a name and no href
-        # stops that without making it clickable
-        out.append(f'<a href="{link}">{tag}</a>' if link else f'<a name="card-{name}">{tag}</a>')
+    for _, _, cells in ROWS:
+        for name, left, right, link, alt in cells:
+            tag = f'<img src="{src(name)}" width="{pct(right - left)}" align="top" alt="{about if alt is None else alt}" />'
+            # GitHub turns a bare image into a link to its own file; inside <picture> it leaves it alone
+            out.append(f'<a href="{link}">{tag}</a>' if link else f'<picture>{tag}</picture>')
     # no whitespace between the tags: any gap would show up as a seam in the card
     return "<p>" + "".join(out) + "</p>"
 
