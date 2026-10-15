@@ -91,28 +91,23 @@ def advances(text, size):
 
 
 def typed():
-    """Typing animation for the text. Links are drawn as they are: they sit in their own slices,
-    and every slice is a separate image whose clock starts whenever the browser gets to it,
-    so anything timed there would run out of step with the rest of the card."""
     t, clips, texts, cursors, rule_at = TEXT_START, [], [], [], 0
-    last_typed = max(k for k, line in enumerate(LINES) if not line[8])
     for k, (text, x, y, size, weight, color, per, pause, underline) in enumerate(LINES):
         stops = advances(text, size)
         n, total = len(text), stops[-1]
         if x is None:
             x = RIGHT - total
-        line = (f'<text x="{x}" y="{y}" font-size="{size}" font-weight="{weight}" fill="{color}" '
-                f'textLength="{total:.1f}" lengthAdjust="spacing">{text}</text>')
-        if underline:
-            texts.append(line + f'<rect x="{x}" y="{y + 6}" width="{total:.1f}" height="1.5" fill="{color}"/>')
-            continue
         dur = n * per
         widths = ";".join(f"{w:.1f}" for w in stops)
         xs = ";".join(f"{x + w + 2:.1f}" for w in stops)
         clips.append(f'<clipPath id="l{k}"><rect x="{x}" y="{y - size}" width="0" height="{size * 1.5:.0f}">'
                      f'<animate attributeName="width" calcMode="discrete" values="{widths}" begin="{t:.2f}s" dur="{dur:.2f}s" fill="freeze"/></rect></clipPath>')
+        line = (f'<text x="{x}" y="{y}" font-size="{size}" font-weight="{weight}" fill="{color}" '
+                f'textLength="{total:.1f}" lengthAdjust="spacing">{text}</text>')
+        if underline:
+            line += f'<rect x="{x}" y="{y + 6}" width="{total:.1f}" height="1.5" fill="{color}"/>'
         texts.append(f'<g clip-path="url(#l{k})">{line}</g>')
-        last = k == last_typed
+        last = k == len(LINES) - 1
         hold = "indefinite" if last else f"{dur + pause:.2f}s"
         blink = 'class="blink" ' if last else ""
         cursors.append(f'<rect {blink}x="{x}" y="{y - size * .82:.0f}" width="{max(3, size * .09):.0f}" height="{size:.0f}" fill="{INK}" opacity="0">'
@@ -132,15 +127,13 @@ def card(box=(0, 0, W, H)):
     reach = 44  # dots just outside a slice are kept: the drawing moves while it floats up
     dots = "".join(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r}"/>' for x, y in drawing(ox, oy, step)
                    if bx - 4 <= x <= bx + bw + 4 and by - reach <= y <= by + bh + reach)
-    if by > 0:
-        # lower slices load and start on their own, so the drawing there is simply shown
-        reveal = ""
-        art = f'<g fill="{INK}" clip-path="url(#card)">{dots}</g>'
-    elif BLEED:
-        # the drawing fades in (no movement: it has to meet the still part in the slices below)
+    if BLEED:
+        # the whole drawing fades in while sliding up
         reveal = ""
         art = (f'<g fill="{INK}" clip-path="url(#card)"><g opacity="0">'
-               f'<animate attributeName="opacity" values="0;1" begin="{ART_START}s" dur="{RISE_TIME}s" fill="freeze"/>{dots}</g></g>')
+               f'<animate attributeName="opacity" values="0;1" begin="{ART_START}s" dur="{RISE_TIME}s" fill="freeze"/>'
+               f'<animateTransform attributeName="transform" type="translate" values="0 36;0 0" begin="{ART_START}s" dur="{RISE_TIME}s" '
+               f'calcMode="spline" keySplines="0.1 0.7 0.2 1" keyTimes="0;1" fill="freeze"/>{dots}</g></g>')
     else:
         # printed like a photo: one finished row of dots at a time
         heights = ";".join(f"{i * step:.1f}" for i in range(ART_ROWS + 1))
